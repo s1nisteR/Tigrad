@@ -250,12 +250,10 @@ namespace tg
     {
         if (ctx->data[rhs] == 0.0f)
             throw std::runtime_error("Division by zero!");
-        ctx->grad[lhs] += (1.0f / ctx->data[rhs]) * ctx->grad[out];
 
-        const float tmp = ctx->data[rhs] * ctx->data[rhs];
-        if (tmp == 0.0f)
-            throw std::runtime_error("Division by zero!");
-        ctx->grad[rhs] += (-ctx->data[lhs] / tmp) * ctx->grad[out];
+        const float invRhs = 1.0f / ctx->data[rhs];
+        ctx->grad[lhs] += invRhs * ctx->grad[out];
+        ctx->grad[rhs] += (-ctx->data[lhs] * (invRhs * invRhs)) * ctx->grad[out];
     }
 
     // POW OP
