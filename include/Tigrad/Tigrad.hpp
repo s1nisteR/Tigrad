@@ -49,6 +49,13 @@ namespace tg
             void calcGrad(Tigrad* ctx) const;
         };
 
+        struct Div
+        {
+            size_t out, lhs, rhs;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
         struct Pow
         {
             size_t out, base, exp;
@@ -56,7 +63,7 @@ namespace tg
             void calcGrad(Tigrad* ctx) const;
         };
 
-        using OpType = std::variant<Add, Sub, Mul, Pow>;
+        using OpType = std::variant<Add, Sub, Mul, Div, Pow>;
     }
 }
 //-----------------------------------------------------------------------------
@@ -216,7 +223,35 @@ namespace tg
         ctx->grad[rhs] += ctx->data[lhs] * ctx->grad[out];
     }
 
-    // pow OP
+    // DIV OP
+    inline Value operator/(const Value& lhs, const Value& rhs)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Div{out.id, lhs.id, rhs.id});
+        return out;
+    }
+    inline Value operator/(const Value& lhs, const float rhs) { return lhs / Tigrad::getActive()->createConstant(rhs); }
+    inline Value operator/(const float lhs, const Value& rhs) { return Tigrad::getActive()->createConstant(lhs) / rhs; }
+    inline void ops::Div::calcData(Tigrad *ctx) const
+    {
+        if (ctx->data[rhs] == 0.0f)
+            throw std::runtime_error("Division by zero!");
+        ctx->data[out] = ctx->data[lhs] / ctx->data[rhs];
+    }
+    inline void ops::Div::calcGrad(Tigrad *ctx) const
+    {
+        if (ctx->data[rhs] == 0.0f)
+            throw std::runtime_error("Division by zero!");
+        ctx->grad[lhs] += (1.0f / ctx->data[rhs]) * ctx->grad[out];
+
+        const float tmp = ctx->data[rhs] * ctx->data[rhs];
+        if (tmp == 0.0f)
+            throw std::runtime_error("Division by zero!");
+        ctx->grad[rhs] += (-ctx->data[lhs] / tmp) * ctx->grad[out];
+    }
+
+    // POW OP
     inline Value pow(const Value& base, const float exp)
     {
         Tigrad* ctx = Tigrad::getActive();
