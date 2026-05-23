@@ -35,6 +35,13 @@ namespace tg
             void calcGrad(Tigrad* ctx) const;
         };
 
+        struct Sub
+        {
+            size_t out, lhs, rhs;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
         struct Mul
         {
             size_t out, lhs, rhs;
@@ -42,7 +49,28 @@ namespace tg
             void calcGrad(Tigrad* ctx) const;
         };
 
-        using OpType = std::variant<Add, Mul>;
+        struct Div
+        {
+            size_t out, lhs, rhs;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
+        struct Pow
+        {
+            size_t out, base, exp;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
+        struct Exp
+        {
+            size_t out, power;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
+        using OpType = std::variant<Add, Sub, Mul, Div, Pow, Exp>;
     }
 }
 //-----------------------------------------------------------------------------
@@ -162,6 +190,25 @@ namespace tg
         ctx->grad[rhs] += ctx->grad[out];
     }
 
+    // SUB OP
+    inline Value operator-(const Value& lhs, const Value& rhs)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Sub{out.id, lhs.id, rhs.id});
+        return out;
+    }
+    inline Value operator-(const Value& lhs, const float rhs) { return lhs - Tigrad::getActive()->createConstant(rhs); }
+    inline Value operator-(const float lhs, const Value& rhs) { return Tigrad::getActive()->createConstant(lhs) - rhs; }
+    inline void ops::Sub::calcData(Tigrad *ctx) const
+    {
+        ctx->data[out] = ctx->data[lhs] - ctx->data[rhs];
+    }
+    inline void ops::Sub::calcGrad(Tigrad *ctx) const
+    {
+        ctx->grad[lhs] += ctx->grad[out];
+        ctx->grad[rhs] += -ctx->grad[out];
+    }
 
     // MUL OP
     inline Value operator*(const Value& lhs, const Value& rhs)
@@ -181,6 +228,67 @@ namespace tg
     {
         ctx->grad[lhs] += ctx->data[rhs] * ctx->grad[out];
         ctx->grad[rhs] += ctx->data[lhs] * ctx->grad[out];
+    }
+
+    // DIV OP
+    inline Value operator/(const Value& lhs, const Value& rhs)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Div{out.id, lhs.id, rhs.id});
+        return out;
+    }
+    inline Value operator/(const Value& lhs, const float rhs) { return lhs / Tigrad::getActive()->createConstant(rhs); }
+    inline Value operator/(const float lhs, const Value& rhs) { return Tigrad::getActive()->createConstant(lhs) / rhs; }
+    inline void ops::Div::calcData(Tigrad *ctx) const
+    {
+        if (ctx->data[rhs] == 0.0f)
+            throw std::runtime_error("Division by zero!");
+        ctx->data[out] = ctx->data[lhs] / ctx->data[rhs];
+    }
+    inline void ops::Div::calcGrad(Tigrad *ctx) const
+    {
+        if (ctx->data[rhs] == 0.0f)
+            throw std::runtime_error("Division by zero!");
+
+        const float invRhs = 1.0f / ctx->data[rhs];
+        ctx->grad[lhs] += invRhs * ctx->grad[out];
+        ctx->grad[rhs] += (-ctx->data[lhs] * (invRhs * invRhs)) * ctx->grad[out];
+    }
+
+    // POW OP
+    inline Value pow(const Value& base, const float exp)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        const Value exponent = ctx->createConstant(exp);
+        ctx->pushOp(ops::Pow(out.id, base.id, exponent.id));
+        return out;
+    }
+    inline void ops::Pow::calcData(Tigrad *ctx) const
+    {
+        ctx->data[out] = std::pow(ctx->data[base], ctx->data[exp]);
+    }
+    inline void ops::Pow::calcGrad(Tigrad *ctx) const
+    {
+        ctx->grad[base] += ctx->data[exp] * std::pow(ctx->data[base], ctx->data[exp] - 1.0f) * ctx->grad[out];
+    }
+
+    // EXP OP
+    inline Value exp(const Value& power)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Exp(out.id, power.id));
+        return out;
+    }
+    inline void ops::Exp::calcData(Tigrad *ctx) const
+    {
+        ctx->data[out] = std::exp(ctx->data[power]);
+    }
+    inline void ops::Exp::calcGrad(Tigrad *ctx) const
+    {
+        ctx->grad[power] += std::exp(ctx->data[power]) * ctx->grad[out];
     }
 }
 
