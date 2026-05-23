@@ -63,7 +63,14 @@ namespace tg
             void calcGrad(Tigrad* ctx) const;
         };
 
-        using OpType = std::variant<Add, Sub, Mul, Div, Pow>;
+        struct Exp
+        {
+            size_t out, power;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
+        using OpType = std::variant<Add, Sub, Mul, Div, Pow, Exp>;
     }
 }
 //-----------------------------------------------------------------------------
@@ -267,6 +274,23 @@ namespace tg
     inline void ops::Pow::calcGrad(Tigrad *ctx) const
     {
         ctx->grad[base] += ctx->data[exp] * std::pow(ctx->data[base], ctx->data[exp] - 1.0f) * ctx->grad[out];
+    }
+
+    // EXP OP
+    inline Value exp(const Value& power)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Exp(out.id, power.id));
+        return out;
+    }
+    inline void ops::Exp::calcData(Tigrad *ctx) const
+    {
+        ctx->data[out] = std::exp(ctx->data[power]);
+    }
+    inline void ops::Exp::calcGrad(Tigrad *ctx) const
+    {
+        ctx->grad[power] += std::exp(ctx->data[power]) * ctx->grad[out];
     }
 }
 
