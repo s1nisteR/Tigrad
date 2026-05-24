@@ -13,7 +13,8 @@ int main()
     const tg::Value x = engine.createVal("x");
     const tg::Value b = engine.createVal("b");
 
-    const auto z = relu(pow(tanh(w), 3.0f) + exp(pow(b, 13.0f))) * (x - b);
+    const tg::Value z = (w * x) + b;
+    const tg::Value y = tg::sigmoid(z);
 
     const size_t count = engine.compile();
 
@@ -21,6 +22,7 @@ int main()
     engine.data[x] = 3;
     engine.data[b] = 4;
     engine.label[z] = "z";
+    engine.label[y] = "y";
 
     engine.calcData();
 
@@ -33,7 +35,7 @@ int main()
 
     engine.zeroGrad();
 
-    engine.calcGrad(z);
+    engine.calcGrad(y);
     for (size_t i = 0; i < count; i++)
     {
         std::cout << engine.label[i] << ": Data: " << engine.data[i] << " Grad: " << engine.grad[i] << std::endl;
