@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <ranges>
 #include <string>
 #include <variant>
@@ -70,7 +71,21 @@ namespace tg
             void calcGrad(Tigrad* ctx) const;
         };
 
-        using OpType = std::variant<Add, Sub, Mul, Div, Pow, Exp>;
+        struct Tanh
+        {
+            size_t out, arg;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
+        struct Relu
+        {
+            size_t out, arg;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
+        using OpType = std::variant<Add, Sub, Mul, Div, Pow, Exp, Tanh, Relu>;
     }
 }
 //-----------------------------------------------------------------------------
@@ -289,6 +304,40 @@ namespace tg
     inline void ops::Exp::calcGrad(Tigrad *ctx) const
     {
         ctx->grad[power] += std::exp(ctx->data[power]) * ctx->grad[out];
+    }
+
+    // TANH OP
+    inline Value tanh(const Value& arg)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Tanh(out.id, arg.id));
+        return out;
+    }
+    inline void ops::Tanh::calcData(Tigrad *ctx) const
+    {
+        ctx->data[out] = std::tanh(ctx->data[arg]);
+    }
+    inline void ops::Tanh::calcGrad(Tigrad *ctx) const
+    {
+        ctx->grad[arg] += (1 - (ctx->data[out] * ctx->data[out])) * ctx->grad[out];
+    }
+
+    // RELU OP
+    inline Value relu(const Value& arg)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Relu(out.id, arg.id));
+        return out;
+    }
+    inline void ops::Relu::calcData(Tigrad *ctx) const
+    {
+        ctx->data[out] = std::max(0.0f, ctx->data[arg]);
+    }
+    inline void ops::Relu::calcGrad(Tigrad *ctx) const
+    {
+        ctx->grad[arg] += static_cast<float>(ctx->data[out] > 0.0f) * ctx->grad[out];
     }
 }
 
