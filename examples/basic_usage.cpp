@@ -13,7 +13,7 @@ int main()
     const tg::Value x = engine.createVal("x");
     const tg::Value b = engine.createVal("b");
 
-    const auto z = w * x + b;
+    const auto z = relu(pow(tanh(w), 3.0f) + exp(pow(b, 13.0f))) * (x - b);
 
     const size_t count = engine.compile();
 
@@ -30,6 +30,8 @@ int main()
     }
 
     std::cout << std::endl;
+
+    engine.zeroGrad();
 
     engine.calcGrad(z);
     for (size_t i = 0; i < count; i++)
