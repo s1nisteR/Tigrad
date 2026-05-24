@@ -85,7 +85,14 @@ namespace tg
             void calcGrad(Tigrad* ctx) const;
         };
 
-        using OpType = std::variant<Add, Sub, Mul, Div, Pow, Exp, Tanh, Relu>;
+        struct Sigmoid
+        {
+            size_t out, arg;
+            void calcData(Tigrad* ctx) const;
+            void calcGrad(Tigrad* ctx) const;
+        };
+
+        using OpType = std::variant<Add, Sub, Mul, Div, Pow, Exp, Tanh, Relu, Sigmoid>;
     }
 }
 //-----------------------------------------------------------------------------
@@ -320,7 +327,7 @@ namespace tg
     }
     inline void ops::Tanh::calcGrad(Tigrad *ctx) const
     {
-        ctx->grad[arg] += (1 - (ctx->data[out] * ctx->data[out])) * ctx->grad[out];
+        ctx->grad[arg] += (1.0f - (ctx->data[out] * ctx->data[out])) * ctx->grad[out];
     }
 
     // RELU OP
@@ -338,6 +345,23 @@ namespace tg
     inline void ops::Relu::calcGrad(Tigrad *ctx) const
     {
         ctx->grad[arg] += static_cast<float>(ctx->data[out] > 0.0f) * ctx->grad[out];
+    }
+
+    // SIGMOID OP
+    inline Value sigmoid(const Value& arg)
+    {
+        Tigrad* ctx = Tigrad::getActive();
+        const Value out = ctx->createVal();
+        ctx->pushOp(ops::Sigmoid(out.id, arg.id));
+        return out;
+    }
+    inline void ops::Sigmoid::calcData(Tigrad *ctx) const
+    {
+        ctx->data[out] = 1.0f / (1.0f + std::exp(-ctx->data[arg]));
+    }
+    inline void ops::Sigmoid::calcGrad(Tigrad *ctx) const
+    {
+        ctx->grad[arg] += (ctx->data[out] * (1.0f - ctx->data[out])) * ctx->grad[out];
     }
 }
 
