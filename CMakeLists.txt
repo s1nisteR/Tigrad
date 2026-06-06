@@ -8,7 +8,7 @@ add_library(Tigrad INTERFACE)
 
 add_library(Tigrad::Tigrad ALIAS Tigrad)
 
-target_compile_features(Tigrad INTERFACE cxx_std_23)
+target_compile_features(Tigrad INTERFACE cxx_std_20)
 
 target_include_directories(Tigrad
     INTERFACE
