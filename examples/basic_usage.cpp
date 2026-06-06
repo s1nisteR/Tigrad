@@ -41,5 +41,7 @@ int main()
         std::cout << engine.label[i] << ": Data: " << engine.data[i] << " Grad: " << engine.grad[i] << std::endl;
     }
 
+    tg::Tigrad::visualize(&engine);
+
     return 0;
 }
