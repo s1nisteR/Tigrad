@@ -8,10 +8,10 @@ set_target_properties(basic_usage PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples_bin"
 )
 
-add_executable(neural_net neural_net.cpp)
+add_executable(single_neuron single_neuron.cpp)
 
-target_link_libraries(neural_net PRIVATE Tigrad::Tigrad)
+target_link_libraries(single_neuron PRIVATE Tigrad::Tigrad)
 
-set_target_properties(neural_net PROPERTIES
+set_target_properties(single_neuron PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/examples_bin"
 )
