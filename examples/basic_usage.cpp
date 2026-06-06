@@ -2,7 +2,7 @@
 #include <memory>
 
 #define TIGRAD_IMPLEMENTATION
-#include "../include/Tigrad/Tigrad.hpp"
+#include <Tigrad/Tigrad.hpp>
 
 int main()
 {
